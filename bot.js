@@ -7,7 +7,7 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
 
 const product_url =
-  "https://www.stanley1913.com/products/the-iceflow-flip-straw-tumbler-30-oz?variant=53972775141736";
+  "https://www.stanley1913.com/products/adventure-quencher-travel-tumbler-40-oz?variant=53972889207144";
 async function getPage() {
   //creates a new browser instance, running instance of chrome/chromium
   const browser = await puppeteer.launch({ headless: false });
@@ -45,14 +45,14 @@ async function addToCart(page) {
 
 async function fillOutBilling(page) {
   const billingInfo = {
-    "input[id='TextField0]": "Bob",
+    "input[id='email']": "jonj73675@gmail.com",
+    "input[id='TextField0']": "Bob",
     "input[id='TextField1']": "Chad",
     "input[id='shipping-address1']": " 452 W Street",
     "input[id='TextField4']": "Houston",
-    "input[id='Select1']": "Texas",
+    "select[id='Select1']": "TX",
     "input[id='TextField5']": "77046",
-    "input[id='TextField6']": "4445672345",
-    "input[name='cardNumber']": "4111111111111111",
+    "input[id='TextField6']": "(862) 219-8100",
   };
 
   for (const [selector, value] of Object.entries(billingInfo)) {
@@ -65,18 +65,50 @@ async function fillOutBilling(page) {
 
       if (tagName === "select") {
         await page.select(selector, value);
+
+        await page.$eval(selector, (el) =>
+          el.dispatchEvent(new Event("change", { bubbles: true }))
+        );
       } else {
         await page.focus(selector);
-        await page.click(selector, { clickCount: 3 });
-        await page.type(selector, value);
+        await page.evaluate(
+          (sel, val) => {
+            const input = document.querySelector(sel);
+            input.value = val;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            input.dispatchEvent(new Event("blur", { bubbles: true }));
+          },
+          selector,
+          value
+        );
+        // await page.focus(selector);
+        // await page.click(selector, { clickCount: 3 });
+        // await page.type(selector, value);
       }
     } catch (err) {
-      console.log("failed to fill ${selector}: ${err.message}");
+      console.log(`failed to fill ${selector}: ${err.message}`);
     }
   }
 
-  await page.type();
+  //await page.waitForTimeout(1000);
+  const shippingButton = await page.waitForSelector("button[type='submit']", {
+    visible: true,
+  });
+
+  await shippingButton.evaluate((el) => el.click());
+
+  // Wait for the shipping section or the new "Continue to shipping" button
+  ///////////
+  const continueShippingBtn = await page.waitForSelector(
+    "::-p-xpath(//button[.//span[text()='Continue to payment']])"
+  );
+  await continueShippingBtn.evaluate((el) => el.scrollIntoView());
+  // Click it
+  await continueShippingBtn.evaluate((el) => el.click());
 }
+
+async function fillOutPayment(page) {}
 
 async function checkOut() {
   const page = await getPage();
@@ -86,3 +118,4 @@ async function checkOut() {
 }
 
 checkOut();
+/*<button aria-busy="false" aria-live="polite" type="submit" class="_1m2hr9ge _1m2hr9gd _1fragemuj _1fragemn2 _1fragemp4 _1fragemtx _1fragemuc _1fragemue _1fragemu3 _1m2hr9g1p _1m2hr9g1l _1fragemoy _1m2hr9g1f _1m2hr9g1c _1fragemu2 _1fragemtr _1m2hr9g20 _1m2hr9g1x _1m2hr9g16 _1m2hr9g13 _1m2hr9gh _1m2hr9gf _1fragem32 _1m2hr9g1w _1m2hr9g19 _1m2hr9g17 _1fragempz _1m2hr9g1k"><span class="_1m2hr9gv _1m2hr9gu _1fragemtt _1fragemu8 _1fragemu2 _1fragemuf _1m2hr9gr _1m2hr9gp _1fragem3c _1fragem87 _1fragemtv">Continue to payment</span></button> */
